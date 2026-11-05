@@ -1074,9 +1074,11 @@ app.post("/send-login-history-otp", async (req,res) =>{
     });
   }catch(error){
     console.error("SEND LOGIN HISTORY OTP ERROR:", error);
+    console.error("ERROR CODE:", error.code);
+    console.error("ERROR RESPONSE:", error.response);
     return res.status(500).json({ 
       success: false,
-      error: "Unable to send OTP",
+      error: error.message ||"Unable to send OTP",
     });
   }
 });
