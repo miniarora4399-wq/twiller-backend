@@ -64,7 +64,11 @@ console.log("BACKEND STARTED");
 
 const app = express();
 app.use(cors({
-  origin:"http://localhost:3000",
+  origin:[
+    "http://localhost:3000",
+    "https://twiller-frontend-seven.vercel.app"
+],
+
   credentials:true,
 }));
 app.use(express.json());
