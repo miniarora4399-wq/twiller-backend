@@ -619,31 +619,46 @@ app.post("/forgot-password", async (req, res) => {
     user.lastPasswordResetDate = now;
     await user.save();
     
-    if(user.email){
-      try{
-        await transporter.sendMail({
-          from : process.env.EMAIL_USER,
-          to   :user.email,
-          subject: "Twiller Password Reset",
-          text : `Your new Twiller password is ${newPassword}`,
+    if (user.email) {
+      try {
+        const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "api-key": process.env.BREVO_API_KEY,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: {
+              name: "Twiller",
+              email: process.env.BREVO_SENDER_EMAIL,
+            },
+            to: [{ email: user.email }],
+            subject: "Twiller Password Reset",
+            textContent: `Your new Twiller password is ${newPassword}`,
+          }),
         });
 
+        if (!brevoResponse.ok) {
+          const errorText = await brevoResponse.text();
+          throw new Error(`Brevo email failed: ${brevoResponse.status} ${errorText}`);
+        }
+
         return res.status(200).json({
-          message : "New password sent to your registered email.",
+          message: "New password sent to your registered email.",
         });
       } catch (emailError) {
         console.error("Password reset email error:", emailError);
         return res.status(500).json({
-          message : "Password was changed, but email delivery failed. Contact support.",
+          message: "Password was changed, but email delivery failed. Contact support.",
         });
       }
     }
 
     return res.status(400).json({
-      message : "No registered email found.SMS delivery must be configured for phone password reset"
+      message: "No registered email found. SMS delivery must be configured for phone password reset",
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({
       message: "Password reset failed.",
