@@ -419,12 +419,28 @@ app.post("/retweet/:tweetid", async (req, res) => {
     console.log("Generated OTP:", generatedOTP);    
     
 
-    await mailTransporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: userEmail,
-      subject: "Twiller Audio Tweet OTP",
-      text: `Your OTP for Audio Tweet is ${generatedOTP}. This OTP expires in 5 minutes.`,
-    });
+    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+  method: "POST",
+  headers: {
+    accept: "application/json",
+    "api-key": process.env.BREVO_API_KEY,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    sender: {
+      name: "Twiller",
+      email: process.env.BREVO_SENDER_EMAIL,
+    },
+    to: [{ email: userEmail }],
+    subject: "Twiller Audio Tweet OTP",
+    textContent: `Your OTP for Audio Tweet is ${generatedOTP}. This OTP expires in 5 minutes.`,
+  }),
+});
+
+if (!brevoResponse.ok) {
+  const errorText = await brevoResponse.text();
+  throw new Error(`Brevo email failed: ${brevoResponse.status} ${errorText}`);
+}
 
     res.json({
       message: "OTP sent successfully.",
