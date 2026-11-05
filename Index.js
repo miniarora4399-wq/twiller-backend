@@ -943,12 +943,30 @@ app.post("/language/send-otp", async (req, res) => {
 
     console.log("BEFORE SENDING EMAIL");
 
-      await transporter.sendMail({
-        from : process.env.EMAIL_USER,
-        to: destination,
-        subject: "Twiller Language Verification OTP",
-        text : `Your OTP is ${otp}. It expires in 5 minutes.`,
-      });
+      
+const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+  method: "POST",
+  headers: {
+    accept: "application/json",
+    "api-key": process.env.BREVO_API_KEY,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    sender: {
+      name: "Twiller",
+      email: process.env.BREVO_SENDER_EMAIL,
+    },
+    to: [{ email: destination }],
+    subject: "Twiller Language Verification OTP",
+    textContent: `Your OTP is ${otp}. It expires in 5 minutes.`,
+  }),
+});
+
+if (!brevoResponse.ok) {
+  const errorText = await brevoResponse.text();
+  throw new Error(`Brevo email failed: ${brevoResponse.status} ${errorText}`);
+}
+
      
       console.log("EMAIL SENT:", info.messageId);
       console.log("Language OTP sent to registered email");
