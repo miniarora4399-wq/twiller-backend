@@ -1065,12 +1065,28 @@ app.post("/send-login-history-otp", async (req,res) =>{
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Twiller Google Login History OTP",
-      text: `Your OTP for accessing login history is ${otp}. It expires in 5 minutes.`,
-    });
+    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+  method: "POST",
+  headers: {
+    "accept": "application/json",
+    "api-key": process.env.BREVO_API_KEY,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    sender: {
+      name: "Twiller",
+      email: process.env.BREVO_SENDER_EMAIL,
+    },
+    to: [{ email }],
+    subject: "Twiller Google Login History OTP",
+    textContent: `Your OTP for accessing login history is ${otp}. It expires in 5 minutes.`,
+  }),
+});
+
+if (!brevoResponse.ok) {
+  const errorText = await brevoResponse.text();
+  throw new Error(`Brevo email failed: ${brevoResponse.status} ${errorText}`);
+}
 
     return res.status(200).json({
       success: true,
